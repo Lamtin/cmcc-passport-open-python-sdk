@@ -81,7 +81,7 @@ class ChinaMobile(object):
         conn = Connection(OAUTH_API_URL)
         params = self.params
         self.params = {}
-        result = conn.request_get(resource=resource, args=params)
+        result = conn.request_get(resource=self._check_resource(resource), args=params)
         return json.loads(result['body'])
 
     def api_delete(self, resource):
@@ -93,7 +93,7 @@ class ChinaMobile(object):
         conn = Connection(OAUTH_API_URL)
         params = self.params
         self.params = {}
-        result = conn.request_delete(resource=resource, args=params)
+        result = conn.request_delete(resource=self._check_resource(resource), args=params)
         return json.loads(result['body'])
 
     def api_post(self, resource, body = None, filename=None, headers={}):
@@ -105,7 +105,7 @@ class ChinaMobile(object):
         conn = Connection(OAUTH_API_URL)
         params = self.params
         self.params = {}
-        result = conn.request_post(resource=resource, args=params, body = body, filename=filename, headers=headers)
+        result = conn.request_post(resource=self._check_resource(resource), args=params, body = body, filename=filename, headers=headers)
         return json.loads(result['body'])
 
     def api_put(self, resource, body = None, filename=None, headers={}):
@@ -117,8 +117,13 @@ class ChinaMobile(object):
         conn = Connection(OAUTH_API_URL)
         params = self.params
         self.params = {}
-        conn.request_put(resource=resource, args=params, body = body, filename=filename, headers=headers)
+        conn.request_put(resource=self._check_resource(resource), args=params, body = body, filename=filename, headers=headers)
         return json.loads(result['body'])
+
+    def _check_resource(self, resource):
+        if resource.startswith('/'):
+            resource = resource[1:]
+        return resource
 
     def quote(self, s):
         if isinstance(s, unicode):
