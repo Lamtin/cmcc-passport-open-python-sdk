@@ -8,7 +8,12 @@ from lib.cmcc import ChinaMobile
 
 app = Flask(__name__)
 
-conn = ChinaMobile()
+oauth_config = {  \
+    'oauth_consumer_key' : 'your oauth consumer key', \
+    'oauth_app_secret'   : 'your oauth app secret' \
+}
+
+conn = ChinaMobile(oauth_config)
 
 @app.route('/')
 def index():
@@ -17,9 +22,9 @@ def index():
 
     try:
         result = conn.get_request_token('http://127.0.0.1:5000/auth')
-        session['oauth_token_secret'] = result['oauth_token_secret']
-        session['oauth_token'] = result['oauth_token']
-        conn.set_token(result['oauth_token'])
+        session['oauth_token_secret'] = result['oauth_token_secret'][0]
+        session['oauth_token'] = result['oauth_token'][0]
+        conn.set_token(session['oauth_token'])
         return "<a href='%s'>Login</a>" % (conn.get_authorize_url() ,)
     except:
         return "Error"
@@ -35,8 +40,8 @@ def auth():
             result = conn.get_access_token(oauth_verifier)
             session.pop('oauth_token_secret', None)
             session.pop('oauth_token', None)
-            session['oauth_access_token_secret'] = result['oauth_token_secret']
-            session['oauth_access_token'] = result['oauth_token']
+            session['oauth_access_token_secret'] = result['oauth_token_secret'][0]
+            session['oauth_access_token'] = result['oauth_token'][0]
             session['login'] = '1'
             return redirect(url_for('auth'))
         except:

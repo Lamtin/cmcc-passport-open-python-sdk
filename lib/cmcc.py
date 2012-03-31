@@ -10,114 +10,152 @@ import hashlib
 import json
 from restful_lib import Connection
 
-OAUTH_SIGN_METHOD = 'HMAC-SHA1'
-OAUTH_VERSION = '1.0'
-OAUTH_CONSUMER_KEY = 'OAUTH_CONSUMER_KEY'
-OAUTH_APP_SECRET = 'OAUTH_APP_SECRET'
-OAUTH_ENDPOINT_URL = 'OAUTH_ENDPOINT_URL'
-OAUTH_AUTHORIZE_URL = 'OAUTH_AUTHORIZE_URL'
-OAUTH_API_URL = 'OAUTH_API_URL'
-
 
 class ChinaMobile(object):
 
-    def __init__(self):
+    def __init__(self, config={}):
+        '''init'''
+        self.config = {  \
+            'oauth_sign_method'  : 'HMAC-SHA1', \
+            'oauth_version'      : '1.0', \
+            'oauth_consumer_key' : '', \
+            'oauth_app_secret'   : '', \
+            'oauth_endpoint_url' : 'http://120.197.230.234/passport/oauth', \
+            'api_endpoint_url'   : 'http://120.197.230.234/passport/api', \
+        }
+        
+        # set user config
+        self.set_config(config)
+        # var params, token_secret, token
         self.params = dict()
         self.token_secret = None
         self.token = None
 
+    def set_config(self, config={}):
+        '''config'''
+        allow_config_keys = ['oauth_consumer_key', 'oauth_app_secret', 'oauth_endpoint_url', 'api_endpoint_url']
+        # set config
+        for key in allow_config_keys:
+            if key in config.keys():
+                self.config[key] = config[key]
+
     def set_params(self, args=None):
-        self.params['oauth_nonce'] = self.nonce()
-        self.params['oauth_consumer_key'] = OAUTH_CONSUMER_KEY
-        self.params['oauth_signature_method'] = OAUTH_SIGN_METHOD
-        self.params['oauth_version'] = OAUTH_VERSION
+        '''set params'''
+        self.params['oauth_nonce'] = self._nonce()
+        self.params['oauth_consumer_key'] = self.config['oauth_consumer_key']
+        self.params['oauth_signature_method'] = self.config['oauth_sign_method']
+        self.params['oauth_version'] = self.config['oauth_version']
         self.params['oauth_timestamp'] = str(int(time.time()))
         if args:
             self.params.update(args)
 
     def set_token(self, token):
-        if 'list' in str(type(token)):
-            token = token[0]
         self.token = token
 
     def set_token_secret(self, secret):
-        if 'list' in str(type(secret)):
-            secret = secret[0]
         self.token_secret = secret
 
     def get_request_token(self, callback='null'):
-        self.set_params( {'oauth_callback' : callback} )
-        bs = self.base_string('GET', '%s/%s' % (OAUTH_ENDPOINT_URL, 'request_token'), self.params)
-        key = self.quote(OAUTH_APP_SECRET)
+        # set params
+        self.set_params( {'oauth_callback' : callback} ) 
+        # format params
+        bs = self._base_string('GET', '%s/%s' % (self.config['oauth_endpoint_url'], 'request_token'), self.params)
+        key = self._quote(self.config['oauth_app_secret'])
+        # signature
         self.params['oauth_signature'] = base64.b64encode(hmac.new('%s&' % key, bs, hashlib.sha1).digest())
-        conn = Connection(OAUTH_ENDPOINT_URL)
-        params = self.params
+        # conn
+        conn = Connection(self.config['oauth_endpoint_url'])
+        result = conn.request_get('request_token', self.params)
+        # reset params
         self.params = {}
-        result = conn.request_get('request_token', params)
+        # return
         return urlparse.parse_qs(result['body'])
 
     def get_authorize_url(self):
-        return "%s?oauth_token=%s" % (OAUTH_AUTHORIZE_URL, self.token)
+        return "%s/authorize?oauth_token=%s" % (self.config['oauth_endpoint_url'], self.token)
 
     def get_access_token(self, verifier):
-        if 'list' in str(type(verifier)):
-            verifier = verifier[0]
-        self.set_params( {'oauth_token':self.token, 'oauth_verifier':verifier} )
-        bs = self.base_string('GET', '%s/%s' % (OAUTH_ENDPOINT_URL, 'access_token'), self.params)
-        key = "%s&%s" % (self.quote(OAUTH_APP_SECRET), self.quote(self.token_secret))
-        self.params['oauth_signature'] = self.signature(key, bs)
-        conn = Connection(OAUTH_ENDPOINT_URL)
-        params = self.params
+        # set params
+        self.set_params( {'oauth_token':self.token, 'oauth_verifier':verifier} ) 
+        # format params
+        bs = self._base_string('GET', '%s/%s' % (self.config['oauth_endpoint_url'], 'access_token'), self.params)
+        key = "%s&%s" % (self._quote(self.config['oauth_app_secret']), self._quote(self.token_secret))
+        # signature
+        self.params['oauth_signature'] = self._signature(key, bs)
+        # conn
+        conn = Connection(self.config['oauth_endpoint_url'])
+        result = conn.request_get('access_token', self.params)
+        # reset params
         self.params = {}
-        result = conn.request_get('access_token', params)
+        # return
         return urlparse.parse_qs(result['body'])
 
     def api_get(self, resource):
-        self.set_params()
+        # set params
+        self.set_params() 
         self.params['oauth_token'] = self.token
-        bs = self.base_string('GET', '%s/%s' % (OAUTH_API_URL, resource), self.params)
-        key = "%s&%s" % (self.quote(OAUTH_APP_SECRET), self.quote(self.token_secret))
-        self.params['oauth_signature'] = self.signature(key, bs)
-        conn = Connection(OAUTH_API_URL)
-        params = self.params
+        # format params
+        bs = self._base_string('GET', '%s/%s' % (self.config['api_endpoint_url'], resource), self.params)
+        key = "%s&%s" % (self._quote(self.config['oauth_app_secret']), self._quote(self.token_secret))
+        # signature
+        self.params['oauth_signature'] = self._signature(key, bs)
+        # conn
+        conn = Connection(self.config['api_endpoint_url'])
+        result = conn.request_get(resource=self._check_resource(resource), args=self.params)
+        # reset params
         self.params = {}
-        result = conn.request_get(resource=self._check_resource(resource), args=params)
+        # return
         return json.loads(result['body'])
 
     def api_delete(self, resource):
-        self.set_params()
+        # set params
+        self.set_params() 
         self.params['oauth_token'] = self.token
-        bs = self.base_string('DELETE', '%s/%s' % (OAUTH_API_URL, resource), self.params)
-        key = "%s&%s" % (self.quote(OAUTH_APP_SECRET), self.quote(self.token_secret))
-        self.params['oauth_signature'] = self.signature(key, bs)
-        conn = Connection(OAUTH_API_URL)
-        params = self.params
+        # format params
+        bs = self._base_string('DELETE', '%s/%s' % (self.config['api_endpoint_url'], resource), self.params)
+        key = "%s&%s" % (self._quote(self.config['oauth_app_secret']), self._quote(self.token_secret))
+        # signature
+        self.params['oauth_signature'] = self._signature(key, bs)
+        # conn
+        conn = Connection(self.config['api_endpoint_url'])
+        result = conn.request_delete(resource=self._check_resource(resource), args=self.params)
+        # reset params
         self.params = {}
-        result = conn.request_delete(resource=self._check_resource(resource), args=params)
+        # return
         return json.loads(result['body'])
 
     def api_post(self, resource, body = None, filename=None, headers={}):
-        self.set_params()
+        # set params
+        self.set_params() 
         self.params['oauth_token'] = self.token
-        bs = self.base_string('POST', '%s/%s' % (OAUTH_API_URL, resource), self.params)
-        key = "%s&%s" % (self.quote(OAUTH_APP_SECRET), self.quote(self.token_secret))
-        self.params['oauth_signature'] = self.signature(key, bs)
-        conn = Connection(OAUTH_API_URL)
-        params = self.params
+        # format params
+        bs = self._base_string('POST', '%s/%s' % (self.config['api_endpoint_url'], resource), self.params)
+        key = "%s&%s" % (self._quote(self.config['oauth_app_secret']), self._quote(self.token_secret))
+        # signature
+        self.params['oauth_signature'] = self._signature(key, bs)
+        # conn
+        conn = Connection(self.config['api_endpoint_url'])
+        result = conn.request_post(resource=self._check_resource(resource), args=self.params, body = body, filename=filename, headers=headers)
+        # reset params
         self.params = {}
-        result = conn.request_post(resource=self._check_resource(resource), args=params, body = body, filename=filename, headers=headers)
+        # return
         return json.loads(result['body'])
 
     def api_put(self, resource, body = None, filename=None, headers={}):
-        self.set_params()
+        # set params
+        self.set_params() 
         self.params['oauth_token'] = self.token
-        bs = self.base_string('PUT', '%s/%s' % (OAUTH_API_URL, resource), self.params)
-        key = "%s&%s" % (self.quote(OAUTH_APP_SECRET), self.quote(self.token_secret))
-        self.params['oauth_signature'] = self.signature(key, bs)
-        conn = Connection(OAUTH_API_URL)
-        params = self.params
+        # format params
+        bs = self._base_string('PUT', '%s/%s' % (self.config['api_endpoint_url'], resource), self.params)
+        key = "%s&%s" % (self._quote(self.config['oauth_app_secret']), self._quote(self.token_secret))
+        # signature
+        self.params['oauth_signature'] = self._signature(key, bs)
+        # conn
+        conn = Connection(self.config['api_endpoint_url'])
+        conn.request_put(resource=self._check_resource(resource), args=self.params, body = body, filename=filename, headers=headers)
+        # reset params
         self.params = {}
-        conn.request_put(resource=self._check_resource(resource), args=params, body = body, filename=filename, headers=headers)
+        # return
         return json.loads(result['body'])
 
     def _check_resource(self, resource):
@@ -125,19 +163,19 @@ class ChinaMobile(object):
             resource = resource[1:]
         return resource
 
-    def quote(self, s):
+    def _quote(self, s):
         if isinstance(s, unicode):
             s = s.encode('utf-8')
         return urllib.quote(str(s), safe='~')
 
-    def nonce(self):
+    def _nonce(self):
         ' generate random uuid as oauth_nonce '
         return uuid.uuid4().hex
 
-    def signature(self, key, base_string):
+    def _signature(self, key, base_string):
         return base64.b64encode(hmac.new(key, base_string, hashlib.sha1).digest())[:-1].decode('utf-8')
 
-    def base_string(self, method, url, params):
-        plist = [(self.quote(k), self.quote(v)) for k, v in params.iteritems()]
+    def _base_string(self, method, url, params):
+        plist = [(self._quote(k), self._quote(v)) for k, v in params.iteritems()]
         plist.sort()
-        return '%s&%s&%s' % (method, self.quote(url), self.quote('&'.join(['%s=%s' % (k, v) for k, v in plist])))
+        return '%s&%s&%s' % (method, self._quote(url), self._quote('&'.join(['%s=%s' % (k, v) for k, v in plist])))
