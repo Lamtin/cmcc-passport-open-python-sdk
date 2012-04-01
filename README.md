@@ -16,7 +16,7 @@
 from cmcc import ChinaMobile
 ```
 
-### 以Falsk为例子
+### 以Flask为例子
 ```python
 oauth_config = {  \
     'oauth_consumer_key' : 'your oauth consumer key', \
