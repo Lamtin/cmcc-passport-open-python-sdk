@@ -14,7 +14,7 @@ from restful_lib import Connection
 class ChinaMobile(object):
 
     def __init__(self, config={}):
-        '''init'''
+        '''构造函数'''
         self.config = {  \
             'oauth_sign_method'  : 'HMAC-SHA1', \
             'oauth_version'      : '1.0', \
@@ -32,7 +32,7 @@ class ChinaMobile(object):
         self.token = None
 
     def set_config(self, config={}):
-        '''config'''
+        '''设置'''
         allow_config_keys = ['oauth_consumer_key', 'oauth_app_secret', 'oauth_endpoint_url', 'api_endpoint_url']
         # set config
         for key in allow_config_keys:
@@ -40,7 +40,7 @@ class ChinaMobile(object):
                 self.config[key] = config[key]
 
     def set_params(self, args=None):
-        '''set params'''
+        '''设置提交参数'''
         self.params['oauth_nonce'] = self._nonce()
         self.params['oauth_consumer_key'] = self.config['oauth_consumer_key']
         self.params['oauth_signature_method'] = self.config['oauth_sign_method']
@@ -163,23 +163,27 @@ class ChinaMobile(object):
         return json.loads(result['body'])
 
     def _check_resource(self, resource):
+        '''验证并格式化resource'''
         if resource.startswith('/'):
             resource = resource[1:]
         return resource
 
     def _quote(self, s):
+        '''转义'''
         if isinstance(s, unicode):
             s = s.encode('utf-8')
         return urllib.quote(str(s), safe='~')
 
     def _nonce(self):
-        ' generate random uuid as oauth_nonce '
+        '''生成oauth_nonce'''
         return uuid.uuid4().hex
 
     def _signature(self, key, base_string):
+        '''生成oauth_signature'''
         return base64.b64encode(hmac.new(key, base_string, hashlib.sha1).digest())[:-1].decode('utf-8')
 
     def _base_string(self, method, url, params):
+        '''格式化字符串为生成oauth_signature做准备'''
         plist = [(self._quote(k), self._quote(v)) for k, v in params.iteritems()]
         plist.sort()
         return '%s&%s&%s' % (method, self._quote(url), self._quote('&'.join(['%s=%s' % (k, v) for k, v in plist])))
