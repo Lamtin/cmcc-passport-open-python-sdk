@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 oauth_config = {  \
     'oauth_consumer_key' : 'your oauth consumer key', \
-    'oauth_app_secret'   : 'your oauth app secret' \
+    'oauth_app_secret'   : 'your oauth app secret'
 }
 
 conn = ChinaMobile(oauth_config)

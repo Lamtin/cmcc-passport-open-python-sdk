@@ -95,13 +95,14 @@ class ChinaMobile(object):
         self.set_params() 
         self.params['oauth_token'] = self.token
         # format params
+        resource = self._check_resource(resource)
         bs = self._base_string('GET', '%s/%s' % (self.config['api_endpoint_url'], resource), self.params)
         key = "%s&%s" % (self._quote(self.config['oauth_app_secret']), self._quote(self.token_secret))
         # signature
         self.params['oauth_signature'] = self._signature(key, bs)
         # conn
         conn = Connection(self.config['api_endpoint_url'])
-        result = conn.request_get(resource=self._check_resource(resource), args=self.params)
+        result = conn.request_get(resource=resource, args=self.params)
         # reset params
         self.params = {}
         # return
@@ -112,13 +113,14 @@ class ChinaMobile(object):
         self.set_params() 
         self.params['oauth_token'] = self.token
         # format params
+        resource = self._check_resource(resource)
         bs = self._base_string('DELETE', '%s/%s' % (self.config['api_endpoint_url'], resource), self.params)
         key = "%s&%s" % (self._quote(self.config['oauth_app_secret']), self._quote(self.token_secret))
         # signature
         self.params['oauth_signature'] = self._signature(key, bs)
         # conn
         conn = Connection(self.config['api_endpoint_url'])
-        result = conn.request_delete(resource=self._check_resource(resource), args=self.params)
+        result = conn.request_delete(resource=resource, args=self.params)
         # reset params
         self.params = {}
         # return
@@ -129,13 +131,14 @@ class ChinaMobile(object):
         self.set_params() 
         self.params['oauth_token'] = self.token
         # format params
+        resource = self._check_resource(resource)
         bs = self._base_string('POST', '%s/%s' % (self.config['api_endpoint_url'], resource), self.params)
         key = "%s&%s" % (self._quote(self.config['oauth_app_secret']), self._quote(self.token_secret))
         # signature
         self.params['oauth_signature'] = self._signature(key, bs)
         # conn
         conn = Connection(self.config['api_endpoint_url'])
-        result = conn.request_post(resource=self._check_resource(resource), args=self.params, body = body, filename=filename, headers=headers)
+        result = conn.request_post(resource=resource, args=self.params, body = body, filename=filename, headers=headers)
         # reset params
         self.params = {}
         # return
@@ -146,13 +149,14 @@ class ChinaMobile(object):
         self.set_params() 
         self.params['oauth_token'] = self.token
         # format params
+        resource = self._check_resource(resource)
         bs = self._base_string('PUT', '%s/%s' % (self.config['api_endpoint_url'], resource), self.params)
         key = "%s&%s" % (self._quote(self.config['oauth_app_secret']), self._quote(self.token_secret))
         # signature
         self.params['oauth_signature'] = self._signature(key, bs)
         # conn
         conn = Connection(self.config['api_endpoint_url'])
-        result = conn.request_put(resource=self._check_resource(resource), args=self.params, body = body, filename=filename, headers=headers)
+        result = conn.request_put(resource=resource, args=self.params, body = body, filename=filename, headers=headers)
         # reset params
         self.params = {}
         # return
