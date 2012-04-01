@@ -13,7 +13,7 @@ oauth_config = {  \
     'oauth_app_secret'   : 'your oauth app secret'
 }
 
-conn = ChinaMobile(oauth_config)
+passport = ChinaMobile(oauth_config)
 
 @app.route('/')
 def index():
@@ -21,11 +21,11 @@ def index():
         return redirect(url_for('auth'))
 
     try:
-        result = conn.get_request_token('http://127.0.0.1:5000/auth')
+        result = passport.get_request_token('http://127.0.0.1:5000/auth')
         session['oauth_token_secret'] = result['oauth_token_secret'][0]
         session['oauth_token'] = result['oauth_token'][0]
-        conn.set_token(session['oauth_token'])
-        return "<a href='%s'>Login</a>" % (conn.get_authorize_url() ,)
+        passport.set_token(session['oauth_token'])
+        return "<a href='%s'>Login</a>" % (passport.get_authorize_url() ,)
     except:
         return "Error"
 
@@ -34,10 +34,10 @@ def auth():
     oauth_verifier = request.args.get('oauth_verifier', None)
     if oauth_verifier:
         oauth_verifier = request.args.get('oauth_verifier')
-        conn.set_token_secret(session['oauth_token_secret'])
-        conn.set_token(session['oauth_token'])
+        passport.set_token_secret(session['oauth_token_secret'])
+        passport.set_token(session['oauth_token'])
         try:
-            result = conn.get_access_token(oauth_verifier)
+            result = passport.get_access_token(oauth_verifier)
             session.pop('oauth_token_secret', None)
             session.pop('oauth_token', None)
             session['oauth_access_token_secret'] = result['oauth_token_secret'][0]
@@ -50,11 +50,11 @@ def auth():
     if 'login' not in session:
         return redirect(url_for('index'))
 
-    conn.set_token(session['oauth_access_token'])
-    conn.set_token_secret(session['oauth_access_token_secret'])
+    passport.set_token(session['oauth_access_token'])
+    passport.set_token_secret(session['oauth_access_token_secret'])
 
     try:
-        user = conn.api_get('user/profile')
+        user = passport.api_get('user/profile')
         return "Nick Name: %s<br />Email: %s<br />Gender: %s<br /><a href='/logout'>Logout</a>" % (user['nick_name'], user['email'], user['gender'] )
     except:
         return "Error"
