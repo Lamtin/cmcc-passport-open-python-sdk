@@ -152,7 +152,7 @@ class ChinaMobile(object):
         self.params['oauth_signature'] = self._signature(key, bs)
         # conn
         conn = Connection(self.config['api_endpoint_url'])
-        conn.request_put(resource=self._check_resource(resource), args=self.params, body = body, filename=filename, headers=headers)
+        result = conn.request_put(resource=self._check_resource(resource), args=self.params, body = body, filename=filename, headers=headers)
         # reset params
         self.params = {}
         # return
