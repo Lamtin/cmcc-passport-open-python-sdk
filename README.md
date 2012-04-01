@@ -23,36 +23,36 @@ oauth_config = {  \
     'oauth_app_secret'   : 'your oauth app secret' \
 }
 # 初始化
-conn = ChinaMobile(oauth_config)
+passport = ChinaMobile(oauth_config)
 ```
 
 
 ### 第一步: 获取Request token
 ```python
 # 参数为oauth_callback url,可选
-result = conn.get_request_token('http://127.0.0.1:5000/auth') 
+result = passport.get_request_token('http://127.0.0.1:5000/auth') 
 
 # 将得到的未授权的Request Token以及对应的Request Token Secret存到session
 session['oauth_token_secret'] = result['oauth_token_secret'][0]
 session['oauth_token'] = result['oauth_token'][0]
 
 # 设置使用得到的Request Token
-conn.set_token(session['oauth_token'])
+passport.set_token(session['oauth_token'])
 ```
 
 
 ### 第二步: 请求用户授权Request Token
 ```python
-return redirect(conn.get_authorize_url()) # 跳转授权
+return redirect(passport.get_authorize_url()) # 跳转授权
 ```
 
 
 ### 第三步: 使用授权后的Request Token换取Access Token
 ```python
 # 设置token secret为第一步得到的oauth_token_secret
-conn.set_token_secret(session['oauth_token_secret']) 
+passport.set_token_secret(session['oauth_token_secret']) 
 # 参数为第二步跳转回来的GET参数oauth_verifier
-result = conn.get_access_token(request.args.get('oauth_verifier')) 
+result = passport.get_access_token(request.args.get('oauth_verifier')) 
 
 # 将得到的Access Token以及Access Token Secret存到session
 session['oauth_access_token_secret'] = result['oauth_token_secret'][0]
@@ -63,12 +63,12 @@ session['oauth_access_token'] = result['oauth_token'][0]
 ### 第四步: 使用Access Token访问或修改受保护资源
 ```python
 # 设置使用得到的Access Token
-conn.set_token(session['oauth_access_token']) 
+passport.set_token(session['oauth_access_token']) 
 # 设置使用得到的Access Token Secret
-conn.set_token_secret(session['oauth_access_token_secret']) 
+passport.set_token_secret(session['oauth_access_token_secret']) 
 
 # 查询个人信息api
-user = conn.api_get('user/profile')
+user = passport.api_get('user/profile')
 # 所有方法 api_get() api_post() api_put() api_delete()
 ```
 
