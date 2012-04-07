@@ -72,8 +72,16 @@ user = passport.api_get('user/profile')
 # 所有方法 api_get() api_post() api_put() api_delete()
 ```
 
+## 联系作者
+
+Copyright (c) 2012 Situos Inc. ([http://www.situos.com][situos])
+
+## License
+
+The MIT license
 
 
 
 [HTTPLIB2]: http://code.google.com/p/httplib2/
 [FlASK]: http://flask.pocoo.org/
+[situos]: http://www.situos.com/
