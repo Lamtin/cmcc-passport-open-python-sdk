@@ -1,12 +1,11 @@
 中国移动通行证开放平台Python SDK
 ========
 
-本项目是基于[httplib2][HTTPLIB2]开发的移动通行证平台Python SDK开发包；支持所有官方提供的API，可用于网站接入型应用和普通应用开发。
+本项目是基于httplib开发的移动通行证平台Python SDK开发包；支持所有官方提供的API，可用于网站接入型应用和普通应用开发。
 
 ## 运行环境
 
 * Python 2.6 / 2.7
-* httplib2 [链接][HTTPLIB2]
 * Flask(example) [链接][FLASK]
 
 ## 使用示例
@@ -82,6 +81,5 @@ The MIT license
 
 
 
-[HTTPLIB2]: http://code.google.com/p/httplib2/
 [FlASK]: http://flask.pocoo.org/
 [situos]: http://www.situos.com/

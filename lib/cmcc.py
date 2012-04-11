@@ -6,10 +6,10 @@ import time
 import hmac
 import uuid
 import urllib
+import urllib2
 import hashlib
+import httplib
 import json
-from restful_lib import Connection
-
 
 class ChinaMobile(object):
 
@@ -20,8 +20,9 @@ class ChinaMobile(object):
             'oauth_version'      : '1.0', \
             'oauth_consumer_key' : '', \
             'oauth_app_secret'   : '', \
-            'oauth_endpoint_url' : 'http://120.197.230.234/passport/oauth', \
-            'api_endpoint_url'   : 'http://120.197.230.234/passport/api', \
+            'oauth_endpoint_url' : 'passport/oauth', \
+            'api_endpoint_url'   : 'passport/api', \
+            'api_host'           : '120.197.230.234', \
         }
         
         # set user config
@@ -31,13 +32,14 @@ class ChinaMobile(object):
         self.token_secret = None
         self.token = None
 
-    def set_config(self, config={}):
+    def set_config(self, config=None):
         '''设置'''
-        allow_config_keys = ['oauth_consumer_key', 'oauth_app_secret', 'oauth_endpoint_url', 'api_endpoint_url']
+        allow_config_keys = ['oauth_consumer_key', 'oauth_app_secret']
         # set config
-        for key in allow_config_keys:
-            if key in config.keys():
-                self.config[key] = config[key]
+        if config:
+            for key in allow_config_keys:
+                if key in config.keys():
+                    self.config[key] = config[key]
 
     def set_params(self, args=None):
         '''设置提交参数'''
@@ -59,36 +61,34 @@ class ChinaMobile(object):
         # set params
         self.set_params( {'oauth_callback' : callback} ) 
         # format params
-        bs = self._base_string('GET', '%s/%s' % (self.config['oauth_endpoint_url'], 'request_token'), self.params)
+        bs = self._base_string('GET', 'http://%s/%s/%s' % (self.config['api_host'], self.config['oauth_endpoint_url'], 'request_token'), self.params)
         key = self._quote(self.config['oauth_app_secret'])
         # signature
         self.params['oauth_signature'] = base64.b64encode(hmac.new('%s&' % key, bs, hashlib.sha1).digest())
         # conn
-        conn = Connection(self.config['oauth_endpoint_url'])
-        result = conn.request_get('request_token', self.params)
+        result = self._request(self.config['oauth_endpoint_url'], 'GET', 'request_token', self.params)
         # reset params
         self.params = {}
         # return
-        return urlparse.parse_qs(result['body'])
+        return urlparse.parse_qs(result)
 
     def get_authorize_url(self):
-        return "%s/authorize?oauth_token=%s" % (self.config['oauth_endpoint_url'], self.token)
+        return "http://%s/%s/authorize?oauth_token=%s" % (self.config['api_host'], self.config['oauth_endpoint_url'], self.token)
 
     def get_access_token(self, verifier):
         # set params
         self.set_params( {'oauth_token':self.token, 'oauth_verifier':verifier} ) 
         # format params
-        bs = self._base_string('GET', '%s/%s' % (self.config['oauth_endpoint_url'], 'access_token'), self.params)
+        bs = self._base_string('GET', 'http://%s/%s/%s' % (self.config['api_host'], self.config['oauth_endpoint_url'], 'access_token'), self.params)
         key = "%s&%s" % (self._quote(self.config['oauth_app_secret']), self._quote(self.token_secret))
         # signature
         self.params['oauth_signature'] = self._signature(key, bs)
         # conn
-        conn = Connection(self.config['oauth_endpoint_url'])
-        result = conn.request_get('access_token', self.params)
+        result = self._request(self.config['oauth_endpoint_url'], 'GET', 'access_token', self.params)
         # reset params
         self.params = {}
         # return
-        return urlparse.parse_qs(result['body'])
+        return urlparse.parse_qs(result)
 
     def api_get(self, resource):
         # set params
@@ -96,17 +96,16 @@ class ChinaMobile(object):
         self.params['oauth_token'] = self.token
         # format params
         resource = self._check_resource(resource)
-        bs = self._base_string('GET', '%s/%s' % (self.config['api_endpoint_url'], resource), self.params)
+        bs = self._base_string('GET', 'http://%s/%s/%s' % (self.config['api_host'], self.config['api_endpoint_url'], resource), self.params)
         key = "%s&%s" % (self._quote(self.config['oauth_app_secret']), self._quote(self.token_secret))
         # signature
         self.params['oauth_signature'] = self._signature(key, bs)
         # conn
-        conn = Connection(self.config['api_endpoint_url'])
-        result = conn.request_get(resource=resource, args=self.params)
+        result = self._request(self.config['api_endpoint_url'], 'GET', resource, self.params)
         # reset params
         self.params = {}
         # return
-        return json.loads(result['body'])
+        return json.loads(result)
 
     def api_delete(self, resource):
         # set params
@@ -114,53 +113,67 @@ class ChinaMobile(object):
         self.params['oauth_token'] = self.token
         # format params
         resource = self._check_resource(resource)
-        bs = self._base_string('DELETE', '%s/%s' % (self.config['api_endpoint_url'], resource), self.params)
+        bs = self._base_string('DELETE', 'http://%s/%s/%s' % (self.config['api_host'], self.config['api_endpoint_url'], resource), self.params)
         key = "%s&%s" % (self._quote(self.config['oauth_app_secret']), self._quote(self.token_secret))
         # signature
         self.params['oauth_signature'] = self._signature(key, bs)
         # conn
-        conn = Connection(self.config['api_endpoint_url'])
-        result = conn.request_delete(resource=resource, args=self.params)
+        result = self._request(self.config['api_endpoint_url'], 'DELETE', resource, self.params)
         # reset params
         self.params = {}
         # return
-        return json.loads(result['body'])
+        return json.loads(result)
 
-    def api_post(self, resource, body = None, filename=None, headers={}):
+    def api_post(self, resource, body = None):
         # set params
-        self.set_params() 
+        self.set_params(body) 
         self.params['oauth_token'] = self.token
         # format params
         resource = self._check_resource(resource)
-        bs = self._base_string('POST', '%s/%s' % (self.config['api_endpoint_url'], resource), self.params)
+        bs = self._base_string('POST', 'http://%s/%s/%s' % (self.config['api_host'], self.config['api_endpoint_url'], resource), self.params)
         key = "%s&%s" % (self._quote(self.config['oauth_app_secret']), self._quote(self.token_secret))
         # signature
         self.params['oauth_signature'] = self._signature(key, bs)
         # conn
-        conn = Connection(self.config['api_endpoint_url'])
-        result = conn.request_post(resource=resource, args=self.params, body = body, filename=filename, headers=headers)
+        result = self._request(self.config['api_endpoint_url'], 'POST', resource, self.params)
         # reset params
         self.params = {}
         # return
-        return json.loads(result['body'])
+        return json.loads(result)
 
-    def api_put(self, resource, body = None, filename=None, headers={}):
+    def api_put(self, resource, body = None):
         # set params
-        self.set_params() 
+        self.set_params(body) 
         self.params['oauth_token'] = self.token
         # format params
         resource = self._check_resource(resource)
-        bs = self._base_string('PUT', '%s/%s' % (self.config['api_endpoint_url'], resource), self.params)
+        bs = self._base_string('PUT', 'http://%s/%s/%s' % (self.config['api_host'], self.config['api_endpoint_url'], resource), self.params)
         key = "%s&%s" % (self._quote(self.config['oauth_app_secret']), self._quote(self.token_secret))
         # signature
         self.params['oauth_signature'] = self._signature(key, bs)
         # conn
-        conn = Connection(self.config['api_endpoint_url'])
-        result = conn.request_put(resource=resource, args=self.params, body = body, filename=filename, headers=headers)
+        result = self._request(self.config['api_endpoint_url'], 'PUT', resource, self.params)
         # reset params
         self.params = {}
         # return
-        return json.loads(result['body'])
+        return json.loads(result)
+
+    def _request(self, url, method, path, data={}, headers={}):
+        '''执行查询'''
+        conn = httplib.HTTPConnection(self.config['api_host'])
+        body = urllib.urlencode(data)
+        headers['Accept'] = "application/json"
+        headers['Authorization'] = "OAuth %s" % self._auth_string(data)
+        
+        if method == 'GET':
+            url = "/%s/%s?%s" %(url, path, body)
+        else:
+            url = "/%s/%s" %(url, path)
+            headers['Content-Type'] = "application/json"
+
+        conn.request(method=method, url=url , body=self._body_string(data), headers=headers)
+        result = conn.getresponse()
+        return result.read()
 
     def _check_resource(self, resource):
         '''验证并格式化resource'''
@@ -181,6 +194,22 @@ class ChinaMobile(object):
     def _signature(self, key, base_string):
         '''生成oauth_signature'''
         return base64.b64encode(hmac.new(key, base_string, hashlib.sha1).digest())[:-1].decode('utf-8')
+
+    def _auth_string(self, params):
+        '''生成auth'''
+        plist = [(self._quote(k), self._quote(v)) for k, v in params.iteritems()]
+        plist.sort()
+        return ','.join(['%s="%s"' % (k, v) for k, v in plist])
+
+    def _body_string(self, params):
+        '''格式化body'''
+        for key in ['oauth_nonce', 'oauth_consumer_key', 'oauth_signature_method', 'oauth_version', 'oauth_timestamp', 'oauth_signature', 'oauth_token']:
+            if params.has_key(key):
+                del params[key]
+
+        plist = [(self._quote(k), self._quote(v)) for k, v in params.iteritems()]
+        plist.sort()
+        return '{%s}' % ','.join(['"%s":"%s"' % (k, v) for k, v in plist])
 
     def _base_string(self, method, url, params):
         '''格式化字符串为生成oauth_signature做准备'''
