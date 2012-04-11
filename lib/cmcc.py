@@ -6,7 +6,6 @@ import time
 import hmac
 import uuid
 import urllib
-import urllib2
 import hashlib
 import httplib
 import json
