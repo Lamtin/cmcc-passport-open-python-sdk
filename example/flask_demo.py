@@ -54,7 +54,8 @@ def auth():
     passport.set_token_secret(session['oauth_access_token_secret'])
 
     try:
-        user = passport.api_get('user/profile')
+        query = passport.api_get('user/profile')
+        user = query['body']
         return "Nick Name: %s<br />Email: %s<br />Gender: %s<br /><a href='/logout'>Logout</a>" % (user['nick_name'], user['email'], user['gender'] )
     except:
         return "Error"

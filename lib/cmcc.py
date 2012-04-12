@@ -65,11 +65,11 @@ class ChinaMobile(object):
         # signature
         self.params['oauth_signature'] = base64.b64encode(hmac.new('%s&' % key, bs, hashlib.sha1).digest())
         # conn
-        result = self._request(self.config['oauth_endpoint_url'], 'GET', 'request_token', self.params)
+        response = self._request(self.config['oauth_endpoint_url'], 'GET', 'request_token', self.params)
         # reset params
         self.params = {}
         # return
-        return urlparse.parse_qs(result)
+        return urlparse.parse_qs(response.read())
 
     def get_authorize_url(self):
         return "http://%s/%s/authorize?oauth_token=%s" % (self.config['api_host'], self.config['oauth_endpoint_url'], self.token)
@@ -83,11 +83,11 @@ class ChinaMobile(object):
         # signature
         self.params['oauth_signature'] = self._signature(key, bs)
         # conn
-        result = self._request(self.config['oauth_endpoint_url'], 'GET', 'access_token', self.params)
+        response = self._request(self.config['oauth_endpoint_url'], 'GET', 'access_token', self.params)
         # reset params
         self.params = {}
         # return
-        return urlparse.parse_qs(result)
+        return urlparse.parse_qs(response.read())
 
     def api_get(self, resource):
         # set params
@@ -100,11 +100,11 @@ class ChinaMobile(object):
         # signature
         self.params['oauth_signature'] = self._signature(key, bs)
         # conn
-        result = self._request(self.config['api_endpoint_url'], 'GET', resource, self.params)
+        response = self._request(self.config['api_endpoint_url'], 'GET', resource, self.params)
         # reset params
         self.params = {}
         # return
-        return json.loads(result)
+        return self._format_response(response)
 
     def api_delete(self, resource):
         # set params
@@ -117,11 +117,11 @@ class ChinaMobile(object):
         # signature
         self.params['oauth_signature'] = self._signature(key, bs)
         # conn
-        result = self._request(self.config['api_endpoint_url'], 'DELETE', resource, self.params)
+        response = self._request(self.config['api_endpoint_url'], 'DELETE', resource, self.params)
         # reset params
         self.params = {}
         # return
-        return json.loads(result)
+        return self._format_response(response)
 
     def api_post(self, resource, body = None):
         # set params
@@ -134,11 +134,11 @@ class ChinaMobile(object):
         # signature
         self.params['oauth_signature'] = self._signature(key, bs)
         # conn
-        result = self._request(self.config['api_endpoint_url'], 'POST', resource, self.params)
+        response = self._request(self.config['api_endpoint_url'], 'POST', resource, self.params)
         # reset params
         self.params = {}
         # return
-        return json.loads(result)
+        return self._format_response(response)
 
     def api_put(self, resource, body = None):
         # set params
@@ -151,15 +151,16 @@ class ChinaMobile(object):
         # signature
         self.params['oauth_signature'] = self._signature(key, bs)
         # conn
-        result = self._request(self.config['api_endpoint_url'], 'PUT', resource, self.params)
+        response = self._request(self.config['api_endpoint_url'], 'PUT', resource, self.params)
         # reset params
         self.params = {}
         # return
-        return json.loads(result)
+        return self._format_response(response)
 
     def _request(self, url, method, path, data={}, headers={}):
         '''执行查询'''
         conn = httplib.HTTPConnection(self.config['api_host'])
+        conn.set_debuglevel(2)
         body = urllib.urlencode(data)
         headers['Accept'] = "application/json"
         headers['Authorization'] = "OAuth %s" % self._auth_string(data)
@@ -171,14 +172,21 @@ class ChinaMobile(object):
             headers['Content-Type'] = "application/json"
 
         conn.request(method=method, url=url , body=self._body_string(data), headers=headers)
-        result = conn.getresponse()
-        return result.read()
+        return conn.getresponse()
 
     def _check_resource(self, resource):
         '''验证并格式化resource'''
         if resource.startswith('/'):
             resource = resource[1:]
         return resource
+
+    def _format_response(self,response):
+        '''格式化输出'''
+        result = {'status':response.status,'body':''}
+        body = response.read()
+        if body != '':
+            result['body'] = json.loads(body)
+        return result
 
     def _quote(self, s):
         '''转义'''
@@ -205,7 +213,6 @@ class ChinaMobile(object):
         for key in ['oauth_nonce', 'oauth_consumer_key', 'oauth_signature_method', 'oauth_version', 'oauth_timestamp', 'oauth_signature', 'oauth_token']:
             if params.has_key(key):
                 del params[key]
-
         plist = [(self._quote(k), self._quote(v)) for k, v in params.iteritems()]
         plist.sort()
         return '{%s}' % ','.join(['"%s":"%s"' % (k, v) for k, v in plist])
