@@ -67,8 +67,11 @@ passport.set_token(session['oauth_access_token'])
 passport.set_token_secret(session['oauth_access_token_secret']) 
 
 # 查询个人信息api
-user = passport.api_get('user/profile')
-# 所有方法 api_get() api_post() api_put() api_delete()
+query = passport.api_get('user/profile')
+# HTTP 状态码
+return query['status'] 
+# 内容为 query['body'] 是一个Dict对象
+# 所有方法 api_get('path') api_post('path',{}) api_put('path',{}) api_delete('path')
 ```
 
 ## 联系作者
